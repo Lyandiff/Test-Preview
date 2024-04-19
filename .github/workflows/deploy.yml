@@ -1,4 +1,4 @@
-name: Deploy to Github Pages
+name: Deploy
 
 on:
   workflow_dispatch:
@@ -14,19 +14,96 @@ concurrency:
 
 jobs:
   Build:
-    if: github.ref == 'refs/heads/main' && github.actor == 'Lyandiff'
+    if: github.ref == 'refs/heads/master' && github.actor == 'Lyandiff'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Branch
         uses: actions/checkout@v4
-      - name: Test Echo
+      - name: Move to dist directory
         run: |
-          echo "${{ github.event.repository.name }}" >> index.txt
-      - name: Upload artifact
+          mkdir -p dist
+          for file in ./*/
+          do
+            [[ $file = ./dist/ ]] && continue
+            cp -r "$file" "dist"
+          done
+      - name: Generate 404.html
+        run: |
+          touch dist/404.html
+          echo -e "<!DOCTYPE html>" >> dist/404.html
+          echo -e "<html lang=\"en\">" >> dist/404.html
+          echo -e "\t<head>" >> dist/404.html
+          echo -e "\t\t<meta charset=\"UTF-8\" />" >> dist/404.html
+          echo -e "\t\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />" >> dist/404.html
+          echo -e "\t\t<title>Project Not Found</title>" >> dist/404.html
+          echo -e "\t\t<style>" >> dist/404.html
+          echo -e "\t\t\t* {" >> dist/404.html
+          echo -e "\t\t\t\tmargin: 0;" >> dist/404.html
+          echo -e "\t\t\t\tpadding: 0;" >> dist/404.html
+          echo -e "\t\t\t}" >> dist/404.html
+          echo -e "\t\t\tbody {" >> dist/404.html
+          echo -e "\t\t\t\tbackground-color: gray;" >> dist/404.html
+          echo -e "\t\t\t\tposition: relative;" >> dist/404.html
+          echo -e "\t\t\t\tmin-height: 100vh;" >> dist/404.html
+          echo -e "\t\t\t}" >> dist/404.html
+          echo -e "\t\t\tmain {" >> dist/404.html
+          echo -e "\t\t\t\tleft: 50%;" >> dist/404.html
+          echo -e "\t\t\t\ttop: 50%;" >> dist/404.html
+          echo -e "\t\t\t\ttranslate: -50% -50%;" >> dist/404.html
+          echo -e "\t\t\t\tposition: absolute;" >> dist/404.html
+          echo -e "\t\t\t\tbackground-color: black;" >> dist/404.html
+          echo -e "\t\t\t\tcolor: azure;" >> dist/404.html
+          echo -e "\t\t\t\tfont-family: Arial, Helvetica, sans-serif;" >> dist/404.html
+          echo -e "\t\t\t\tdisplay: flex;" >> dist/404.html
+          echo -e "\t\t\t\tflex-direction: column;" >> dist/404.html
+          echo -e "\t\t\t\tjustify-content: space-evenly;" >> dist/404.html
+          echo -e "\t\t\t\talign-items: center;" >> dist/404.html
+          echo -e "\t\t\t\tbox-sizing: border-box;" >> dist/404.html
+          echo -e "\t\t\t\twidth: min(63vh, 84vw);" >> dist/404.html
+          echo -e "\t\t\t\theight: min(84vh, 112vw);" >> dist/404.html
+          echo -e "\t\t\t\tpadding: min(4.5vh, 6vw);" >> dist/404.html
+          echo -e "\t\t\t\tfont-size: min(3vh, 4vw);" >> dist/404.html
+          echo -e "\t\t\t\tborder-radius: min(4.5vh, 6vw);" >> dist/404.html
+          echo -e "\t\t\t}" >> dist/404.html
+          echo -e "\t\t\th1 {" >> dist/404.html
+          echo -e "\t\t\t\tfont-size: min(4.5vh, 6vw);" >> dist/404.html
+          echo -e "\t\t\t}" >> dist/404.html
+          echo -e "\t\t\tul {" >> dist/404.html
+          echo -e "\t\t\t\tlist-style: none;" >> dist/404.html
+          echo -e "\t\t\t}" >> dist/404.html
+          echo -e "\t\t\ta {" >> dist/404.html
+          echo -e "\t\t\t\ttext-decoration: none;" >> dist/404.html
+          echo -e "\t\t\t\tcolor: inherit;" >> dist/404.html
+          echo -e "\t\t\t}" >> dist/404.html
+          echo -e "\t\t\ta:hover {" >> dist/404.html
+          echo -e "\t\t\t\tcolor: dodgerblue;" >> dist/404.html
+          echo -e "\t\t\t}" >> dist/404.html
+          echo -e "\t\t\tarticle {" >> dist/404.html
+          echo -e "\t\t\t\theight: min(60vh, 80vw);" >> dist/404.html
+          echo -e "\t\t\t}" >> dist/404.html
+          echo -e "\t\t</style>" >> dist/404.html
+          echo -e "\t</head>" >> dist/404.html
+          echo -e "\t<body>" >> dist/404.html
+          echo -e "\t\t<main>" >> dist/404.html
+          echo -e "\t\t\t<h1>Proyek Tidak Ditemukan</h1>" >> dist/404.html
+          echo -e "\t\t\t<article>" >> dist/404.html
+          echo -e "\t\t\t\t<p>coba salah satu dari link berikut ini</p>" >> dist/404.html
+          echo -e "\t\t\t\t<ul>" >> dist/404.html
+          repo="${{ github.event.repository.name }}"
+          for file in ./dist/*; do
+            [[ $file = ./dist/404.html ]] && continue
+            echo -e "\t\t\t\t\t<li>&gt; <a href=\"https://lyandiff.github.io/$repo/${file##*/}\">$repo/${file##*/}</a></li>" >> dist/404.html
+          done
+          echo -e "\t\t\t\t</ul>" >> dist/404.html
+          echo -e "\t\t\t</article>" >> dist/404.html
+          echo -e "\t\t</main>" >> dist/404.html
+          echo -e "\t</body>" >> dist/404.html
+          echo -e "</html>" >> dist/404.html
+      - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: |
-            .
+          name: the-artifact
+          path: ./dist
   Deploy:
     environment:
       name: github-pages
@@ -34,8 +111,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: Build
     steps:
-      - name: Setup Pages
+      - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: the-artifact
