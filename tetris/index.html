@@ -4,23 +4,37 @@
     <title>Tetris</title>
     <style>
       body {
-        font-size: 2em;
-      }
-      button {
-        font-size: 1em;
+        font-family: Arial, Helvetica, sans-serif;
         font-weight: bold;
+        font-size: 30px;
       }
       #board {
+        position: relative;
+        font-size: 20px;
         box-sizing: border-box;
         display: flex;
+        align-items: center;
+        justify-content: center;
         flex-wrap: wrap;
         height: 400px;
         width: 200px;
         border: 10px solid black;
       }
-      .block {
+      #board > div {
         width: 10%;
         height: 5%;
+      }
+      #board > .over {
+        position: absolute;
+        left: 0;
+        top: 0;
+        font-size: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(255, 255, 255, 0.7);
+        width: 100%;
+        height: 100%;
       }
       .I {
         background-color: cyan;
@@ -43,62 +57,65 @@
       .Z {
         background-color: red;
       }
-      .hidden {
-        display: none;
-      }
     </style>
   </head>
   <body>
-    Score: <span id="score"></span><br /><div id="board"></div>
-    <button id="play">Play</button>
-    <div id="control" class="hidden">
-      <button onclick="left()">&larr;</button>
-      <button onclick="rotate()">&#8635;</button>
-      <button onclick="drop()">&darr;</button>
-      <button onclick="right()">&rarr;</button>
+    Score: <span id="score"></span><br />
+    <div id="board">
+      &larr; : kiri<br />
+      &rarr; : kanan<br />
+      &nbsp;&uarr; &nbsp;: puter<br />
+      &nbsp;&darr; &nbsp;: jatoh<br /><br />
+      pencet apa aja <br />
+      buat mulai
     </div>
     <script>
-      const SHAPES = [
-        [[0, 1], [1, 1], [2, 1], [3, 1]], // Bentuk I
-        [[0, 1], [1, 1], [2, 1], [0, 0]], // Bentuk J
-        [[0, 1], [1, 1], [2, 1], [2, 0]], // Bentuk L
-        [[1, 0], [1, 1], [2, 0], [2, 1]], // Bentuk O
-        [[0, 1], [1, 1], [1, 0], [2, 0]], // Bentuk S
-        [[0, 1], [1, 1], [2, 1], [1, 0]], // Bentuk T
-        [[0, 0], [1, 1], [1, 0], [2, 1]], // Bentuk Z
-      ];
+      const div = () => document.createElement("div");
+      const boardEl = document.getElementById("board");
+      const SHAPES = {
+        I: [[0, 1], [1, 1], [2, 1], [3, 1]],
+        J: [[0, 1], [1, 1], [2, 1], [0, 0]],
+        L: [[0, 1], [1, 1], [2, 1], [2, 0]],
+        O: [[1, 0], [1, 1], [2, 0], [2, 1]],
+        S: [[0, 1], [1, 1], [1, 0], [2, 0]],
+        T: [[0, 1], [1, 1], [2, 1], [1, 0]],
+        Z: [[0, 0], [1, 1], [1, 0], [2, 1]],
+      };
       const width = 10;
       const height = 20;
       let score = 0;
       let runer = null;
       let piece = {};
-      let board = Array(height).fill().map(() => Array(width).fill(0));
-      board.forEach(row => row.forEach(() => {
-        let a = document.createElement("div");
-        a.classList.add("block");
-        document.getElementById("board").appendChild(a);
-      }));
+      let board = Array.from({ length: height }, () => Array(width).fill(""));
       function display() {
-        [...document.getElementById("board").children].forEach((a, i) => (a.classList = "block " + " IJLOSTZ"[board[Math.floor(i / width)][i % width]]));
-        Array.from(piece).forEach(([x, y]) => document.getElementById("board").children[x + y * width].classList.add(" IJLOSTZ"[piece.color]));
+        const col = i => board[Math.floor(i / width)][i % width];
+        const tile = (x, y) => boardEl.children[x + y * width];
+        [...boardEl.children].forEach((x, i) => (x.classList = col(i)));
+        [...piece].forEach(([x, y]) => tile(x, y).classList.add(piece.color));
         document.getElementById("score").textContent = score;
         return true;
       }
-      function tetromino(shape = Math.floor(Math.random() * 7)) {
-        return { [Symbol.iterator]: () => SHAPES[shape].values(), color: shape + 1 };
+      function tetromino(shape) {
+        if (!SHAPES[shape]) shape = "IJLOSTZ"[Math.floor(Math.random() * 7)];
+        const value = () => SHAPES[shape].values();
+        return { [Symbol.iterator]: value, color: shape };
       }
       function addPiece() {
         [...piece].forEach(([x, y]) => (board[y][x] = piece.color));
       }
       function check(temp) {
-        return temp.every(([x, y]) => x >= 0 && x < width && y >= 0 && y < height && board[y][x] == 0);
+        const boundary = (x, y) => 0 <= x && x < width && 0 <= y && y < height;
+        return temp.every(([x, y]) => boundary(x, y) && !board[y][x]);
       }
       function trans(method) {
         let temp = [...piece].map(method);
-        return check(temp) ? (piece[Symbol.iterator] = () => temp.values(), true) : false;
+        if (!check(temp)) return;
+        piece[Symbol.iterator] = () => temp.values();
+        return true;
       }
       function center() {
-        return trans(([x, y]) => [x + Math.floor(width / 2) - 2, y]) ? display() : false;
+        const centerx = x => x + Math.floor(width / 2) - 2;
+        return trans(([x, y]) => [centerx(x), y]) ? display() : false;
       }
       function rotate() {
         let [cx, cy] = [...piece][1];
@@ -123,47 +140,47 @@
         ArrowLeft: () => left(),
         ArrowRight: () => right(),
         Escape: () => over(),
-        Enter: () => play(),
       };
-      document.addEventListener("keydown", e => {
-        if (input[e.key] == undefined) return console.log(e.key);
-        input[e.key]();
+      document.addEventListener("keydown", ({ key }) => {
+        if (!runer) return play();
+        input[key]?.();
       });
-      function phase() {
+      function spawn() {
         piece = tetromino();
         if (!center()) return false;
         return display();
       }
       function row() {
-        return board.reduce((count, row, line) => row.every(block => block > 0) ? (board.unshift(board.splice(line, 1)[0].fill(0)), ++count) : count, 0);
+        const cleared = board.filter(row => !row.every(block => block !== ""));
+        const line = height - cleared.length;
+        const empty = Array.from({ length: line }, () => Array(width).fill(""));
+        board = [...empty, ...cleared];
+        return line;
       }
       function over() {
         clearInterval(runer);
         runer = null;
-        document.getElementById("score").innerHTML += "<br />Game Over";
-        console.log("game over");
-        document.getElementById("play").classList.remove("hidden");
-        document.getElementById("control").classList.add("hidden");
+        const overEl = div();
+        overEl.classList = "over";
+        overEl.textContent = "Game Over";
+        boardEl.appendChild(overEl);
       }
       function loop() {
         if (fall()) return display();
         addPiece();
         score += [0, 10, 30, 50, 80][row()];
-        if (phase()) return;
+        if (spawn()) return;
         over();
       }
       function play() {
         if (runer) return;
         score = 0;
-        board = Array(height).fill().map(() => Array(width).fill(0));
-        phase();
+        boardEl.innerHTML = "";
+        for (let i = 0; i < width * height; i++) boardEl.appendChild(div());
+        board = Array.from({ length: height }, () => Array(width).fill(""));
+        spawn();
         runer = setInterval(() => loop(), 1000);
       }
-      document.getElementById("play").addEventListener("click", e => {
-        play();
-        e.target.classList.add("hidden");
-        document.getElementById("control").classList.remove("hidden");
-      })
     </script>
   </body>
 </html>
