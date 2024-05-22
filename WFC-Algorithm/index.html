@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WFC-Algorithm</title>
+    <style>
+      #board {
+        height: 400px;
+        width: 400px;
+        display: flex;
+        flex-wrap: wrap;
+      }
+      #board > div {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 20px;
+        height: 10%;
+        width: 10%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #tiles {
+        width: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      #tiles > div {
+        height: 50px;
+        width: 50px;
+      }
+      .kosong {
+        background-image: url("data:image/svg+xml, %3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90'%3E%3Crect width='90' height='90' fill='black' /%3E%3C/svg%3E");
+      }
+      .atas {
+        background-image: url("data:image/svg+xml, %3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90'%3E%3Crect width='90' height='90' fill='cyan' /%3E%3Crect width='30' height='30' fill='black' /%3E%3Crect x='60' width='30' height='30' fill='black' /%3E%3Crect y='60' width='90' height='30' fill='black' /%3E%3C/svg%3E");
+      }
+      .bawah {
+        background-image: url("data:image/svg+xml, %3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90'%3E%3Crect width='90' height='90' fill='cyan' /%3E%3Crect width='90' height='30' fill='black' /%3E%3Crect y='60' width='30' height='30' fill='black' /%3E%3Crect x='60' y='60' width='30' height='30' fill='black' /%3E%3C/svg%3E");
+      }
+      .kanan {
+        background-image: url("data:image/svg+xml, %3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90'%3E%3Crect width='90' height='90' fill='cyan' /%3E%3Crect width='30' height='90' fill='black' /%3E%3Crect x='60' width='30' height='30' fill='black' /%3E%3Crect x='60' y='60' width='30' height='30' fill='black' /%3E%3C/svg%3E");
+      }
+      .kiri {
+        background-image: url("data:image/svg+xml, %3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90'%3E%3Crect width='90' height='90' fill='cyan' /%3E%3Crect x='60' width='30' height='90' fill='black' /%3E%3Crect width='30' height='30' fill='black' /%3E%3Crect y='60' width='30' height='30' fill='black' /%3E%3C/svg%3E");
+      }
+    </style>
+  </head>
+  <body>
+    <div id="tiles">
+      Tiles :
+      <div class="kosong"></div>
+      <div class="kiri"></div>
+      <div class="kanan"></div>
+      <div class="atas"></div>
+      <div class="bawah"></div>
+    </div>
+    <button id="start">Generate</button>
+    <div id="board"></div>
+    <script>
+      const DIM = 10;
+      const boardEl = document.getElementById("board");
+      const rules = {
+        kosong: [
+          ["kosong", "atas"],
+          ["kosong", "kanan"],
+          ["kosong", "bawah"],
+          ["kosong", "kiri"],
+        ],
+        atas: [
+          ["bawah", "kanan", "kiri"],
+          ["bawah", "kiri", "atas"],
+          ["kosong", "bawah"],
+          ["bawah", "kanan", "atas"],
+        ],
+        bawah: [
+          ["kosong", "atas"],
+          ["bawah", "kiri", "atas"],
+          ["atas", "kanan", "kiri"],
+          ["bawah", "kanan", "atas"],
+        ],
+        kiri: [
+          ["bawah", "kanan", "kiri"],
+          ["kosong", "kanan"],
+          ["atas", "kanan", "kiri"],
+          ["bawah", "kanan", "atas"],
+        ],
+        kanan: [
+          ["bawah", "kanan", "kiri"],
+          ["bawah", "kiri", "atas"],
+          ["atas", "kanan", "kiri"],
+          ["kosong", "kiri"],
+        ],
+      };
+      let inter = null;
+      let board = Array.from({ length: DIM }).map(() =>
+        Array.from({ length: DIM }).map(() => Object.keys(rules))
+      );
+      for (let i = 0; i < DIM * DIM; i++) {
+        const div = document.createElement("div");
+        boardEl.appendChild(div);
+      }
+      function display() {
+        const value = i => board[Math.floor(i / DIM)][i % DIM];
+        [...boardEl.children].forEach((x, i) => {
+          if (value(i).length > 1) {
+            x.classList = "";
+            x.textContent = value(i).length;
+            return;
+          }
+          x.classList = value(i)[0];
+          x.textContent = "";
+        });
+      }
+      function check(arr, valid) {
+        return arr.filter(x => valid.includes(x));
+      }
+      function pick() {
+        const indexes = []
+          .concat(...board.map((y, i) => y.map((x, j) => [i, j])))
+          .filter(([x, y]) => board[x][y].length > 1);
+        if (!indexes.length) return false;
+        const choice = indexes.filter(
+          ([x, y]) =>
+            board[x][y].length ===
+            Math.min(...indexes.map(([i, j]) => board[i][j].length))
+        );
+        const pickID = choice[Math.floor(Math.random() * choice.length)];
+        const choosen = board[pickID[0]][pickID[1]];
+        board[pickID[0]][pickID[1]] = [
+          choosen[Math.floor(Math.random() * choosen.length)],
+        ];
+        return true;
+      }
+      function eliminate() {
+        let ret = false;
+        board = board.map((row, j) => {
+          return row.map((x, i) => {
+            if (x.length === 1) return x;
+            if (j > 0 && board[j - 1][i].length === 1) {
+              const atas = board[j - 1][i][0];
+              x = x.filter(a => rules[atas][2].includes(a));
+            }
+            if (i > 0 && board[j][i - 1].length === 1) {
+              const kiri = board[j][i - 1][0];
+              x = x.filter(a => rules[kiri][1].includes(a));
+            }
+            if (j < DIM - 1 && board[j + 1][i].length === 1) {
+              const bawah = board[j + 1][i][0];
+              x = x.filter(a => rules[bawah][0].includes(a));
+            }
+            if (i < DIM - 1 && board[j][i + 1].length === 1) {
+              const kanan = board[j][i + 1][0];
+              x = x.filter(a => rules[kanan][3].includes(a));
+            }
+            if (x.length === 1) ret = true;
+            return x;
+          });
+        });
+        return ret;
+      }
+      function loop() {
+        if (!pick()) {
+          clearInterval(inter);
+          inter = null;
+          return;
+        }
+        while (eliminate());
+        display();
+      }
+      document.addEventListener("keydown", ({ key }) => {
+        if (key === "Enter") loop();
+      });
+      document.getElementById("start").addEventListener("click", () => {
+        board = Array.from({ length: DIM }).map(() =>
+          Array.from({ length: DIM }).map(() => Object.keys(rules))
+        );
+        inter = setInterval(() => loop(), 100);
+      });
+    </script>
+  </body>
+</html>
